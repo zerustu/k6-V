@@ -33,11 +33,19 @@ public class VocalModule extends ListenerAdapter
             }
             Member user = event.getMember();
 
-            AudioChannelUnion myChannel = user.getVoiceState().getChannel();
+            GuildVoiceState GVS = user.getVoiceState();
+
+            if (GVS == null)
+            {
+                event.getChannel().sendMessage("you are not in a voice channel right now").queue();
+                return;
+            }
+            AudioChannelUnion myChannel = GVS.getChannel();
 
             if (myChannel == null)
             {
                 event.getChannel().sendMessage("you are not in a voice channel right now").queue();
+                return;
             }
 
             Guild guild = event.getGuild();
@@ -88,6 +96,7 @@ public class VocalModule extends ListenerAdapter
             if (myChannel == null)
             {
                 event.getHook().sendMessage("you are not in a voice channel right now").queue();
+                return;
             }
 
             Guild guild = event.getGuild();

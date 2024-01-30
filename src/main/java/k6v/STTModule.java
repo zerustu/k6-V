@@ -1,9 +1,8 @@
 package k6v;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -11,36 +10,29 @@ import org.jetbrains.annotations.Nullable;
 
 import ai.picovoice.cheetah.Cheetah;
 import ai.picovoice.cheetah.CheetahException;
-import ai.picovoice.cheetah.CheetahTranscript;
 import ai.picovoice.porcupine.*;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.audio.UserAudio;
 
 public class STTModule {
 
     static final Float limite = (float) (0);
 
     BlockingQueue<byte[]> fifoQueue;
-    BlockingQueue<List<String>> userQueue;
-    HashMap<String, Float> usersProba;
-    List<String> activUsers;
+    HashMap<String, UserBuffer> usersProba;
 
     Cheetah localcheetah;
     Porcupine localporc;
     String transcript;
     String LastTranscript;
     Boolean run;
+    SendAudioModule feedbackinfo;
+    boolean ready;
 
-    public void addData(byte[] dataIn, List<User> users)
+    public void addData(byte[] dataIn)
     {
         if (fifoQueue.remainingCapacity() > 0)
         {
             fifoQueue.add(dataIn);
-            List<String> usersString = new ArrayList<>();
-            users.forEach((u) -> {usersString.add(u.toString());});
-            userQueue.add(usersString);
-            for (User user : users) {
-                usersProba.putIfAbsent(user.toString(), 0f);
-            }
         }
         else
         {
@@ -48,7 +40,25 @@ public class STTModule {
         }
     }
 
-    protected short formatConvert(byte left1, byte left2, byte right1, byte right2)
+    public void addUserData(UserAudio userAudio)
+    {
+        if (!ready) return;
+        if (userAudio.getUser().isBot() || userAudio.getUser().isSystem()) return;
+        String key = userAudio.getUser().toString();
+        if (usersProba.containsKey(key)) {
+            usersProba.get(key).addData(userAudio.getAudioData(1));
+        }
+        else 
+        {
+            UserBuffer newBuffer = new UserBuffer(localporc.getFrameLength(), 50, 10);
+            newBuffer.addData(userAudio.getAudioData(1));
+            Thread loopi = new Thread(() -> {newBuffer.register();});
+            loopi.start();
+            usersProba.put(key, newBuffer);
+        }
+    }
+
+    public static short formatConvert(byte left1, byte left2, byte right1, byte right2)
     {
         short leftSample = (short) ((left1 << 8) | (left2 & 0xFF));
         short rightSample = (short) ((right1 << 8) | (right2 & 0xFF));
@@ -61,8 +71,22 @@ public class STTModule {
         try {
             keywordsIndex = localporc.process(dataIn);
             if (keywordsIndex == 0) {
+                ready = false;
                 System.out.println("K6-V was detected !");
-                usersProba.forEach((k,v) -> {System.out.println("la probabilité que ce soit " + k + " est de " + (v));});
+                for (Entry<String, UserBuffer> entry : usersProba.entrySet()) {
+                    System.out.println("testing " + entry.getKey());
+                    List<short[]> datas = entry.getValue().getData(); 
+                    for (short[] s : datas) {
+                        keywordsIndex = localporc.process(s);
+                        if (keywordsIndex == 0)
+                        {
+                            System.out.println("i think it is " + entry.getKey());
+                        }
+                    }
+                    entry.getValue().run = false;
+                }
+                usersProba.clear();
+                ready = true;
             }
         } catch (PorcupineException e) {
             // TODO Auto-generated catch block
@@ -110,7 +134,6 @@ public class STTModule {
         @Nullable byte[] currentByte = null;
         int bufferIndex = 0;
         short samplebuffer = 0;
-        short lastSample = 0;
 
         int j = 0;
         int TimeOutTimer = 0;
@@ -121,7 +144,6 @@ public class STTModule {
             {
                 if (!fifoQueue.isEmpty()) {
                     currentByte = fifoQueue.poll();
-                    activUsers = userQueue.poll();
                     TimeOutTimer = 0;
                     //System.out.println("processing new data");
                 }
@@ -161,16 +183,9 @@ public class STTModule {
 
                 if (j%3 == 0)
                 {
-                    lastSample = samplebuffer;
                     framebuffer[bufferIndex] = samplebuffer;
-                    samplebuffer = 0;
                     bufferIndex++;
-                    int coef = java.lang.Math.abs(lastSample - samplebuffer);
-                    usersProba.replaceAll((k, v) -> {
-                        if (activUsers.contains(k))
-                            return v*0.9f + coef;
-                        return v * 0.9f;
-                    });
+                    samplebuffer = 0;
                 }
                 if (4*j >= currentByte.length)
                 {
@@ -183,7 +198,6 @@ public class STTModule {
                 feedSTT(framebuffer);
                 if (TimeOutTimer == -1) {
                     flushSTT(localcheetah);
-                    usersProba.forEach((k, v) -> {v = 0f;});
                 }
                 try {
                     Thread.sleep(10);
@@ -208,10 +222,9 @@ public class STTModule {
     public STTModule(String accessKey, String porcupinePath, int capacity, String porcupineModelPath) throws CheetahException, PorcupineException
     {
         run = true;
+        ready = true;
 
         fifoQueue = new ArrayBlockingQueue<byte[]>(capacity);
-        userQueue = new ArrayBlockingQueue<List<String>>(capacity);
-        activUsers = new ArrayList<String>();
         transcript = "";
         LastTranscript = "";
         usersProba = new HashMap<>();

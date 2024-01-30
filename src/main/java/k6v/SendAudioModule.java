@@ -31,22 +31,23 @@ public class SendAudioModule implements AudioReceiveHandler  {
             return;
         }
         //decoderModule.addData(userAudio.getAudioData(1));
+        decoderModule.addUserData(userAudio);
+        //decoderModule.addData(userAudio.getAudioData(1));
     }
 
     @Override
     public boolean canReceiveUser() {
-        return isFocusing;
+        return true;
     }
 
     @Override
     public boolean canReceiveCombined() {
-        return !isFocusing;
+        return true;
     }
 
     @Override
     public void handleCombinedAudio(CombinedAudio combinedAudio) {
-        List<User> user = combinedAudio.getUsers();
-        decoderModule.addData(combinedAudio.getAudioData(1), user);
+        decoderModule.addData(combinedAudio.getAudioData(1));
     }
 
     
