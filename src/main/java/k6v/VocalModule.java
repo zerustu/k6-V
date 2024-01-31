@@ -17,7 +17,7 @@ public class VocalModule extends ListenerAdapter
     @Override
     public void onMessageReceived(MessageReceivedEvent event)
     {
-        if (!App.isUserOp(event.getAuthor())) return;
+        if (!BasicCommands.isUserOp(event.getAuthor())) return;
         if (event.getAuthor().isBot()) return;
         // We don't want to respond to other bot accounts, including ourself
         Message message = event.getMessage();
@@ -74,7 +74,7 @@ public class VocalModule extends ListenerAdapter
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        if (!App.isUserOp(event.getMember().getUser())) 
+        if (!BasicCommands.isUserOp(event.getMember().getUser())) 
         {
             event.reply("you are note allowed to do that!").queue();
             return;
