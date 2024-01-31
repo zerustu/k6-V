@@ -7,13 +7,16 @@ import net.dv8tion.jda.api.audio.CombinedAudio;
 import net.dv8tion.jda.api.audio.UserAudio;
 import net.dv8tion.jda.api.entities.User;
 
-public class SendAudioModule implements AudioReceiveHandler  {
+import javax.sound.sampled.*;
+
+public class ReceiverModule implements AudioReceiveHandler  {
 
     STTModule decoderModule;
     Boolean isFocusing;
     @Nullable User userFocus;
+    static final AudioFormat Format = OUTPUT_FORMAT;
 
-    public SendAudioModule(STTModule decoder)
+    public ReceiverModule(STTModule decoder)
     {
         isFocusing = false;
         userFocus = null;

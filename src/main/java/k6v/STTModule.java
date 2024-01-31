@@ -25,7 +25,7 @@ public class STTModule {
     String transcript;
     String LastTranscript;
     Boolean run;
-    SendAudioModule feedbackinfo;
+    ReceiverModule feedbackinfo;
     boolean ready;
 
     public void addData(byte[] dataIn)

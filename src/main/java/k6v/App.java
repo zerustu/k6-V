@@ -1,6 +1,7 @@
 package k6v;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import org.json.simple.*;
 import org.json.simple.parser.*;
@@ -18,7 +19,7 @@ public class App
 
     public static STTModule sttDecoder;
 
-    static String[] ops;
+    static ArrayList<String> ops;
 
     public static void main( String[] args ) throws Exception
     {
@@ -29,7 +30,7 @@ public class App
 
          //Read JSON file
         JSONObject obj = (JSONObject)jsonParser.parse(reader);
-        ops = (String[])obj.get("Op");
+        ops = (ArrayList<String>)obj.get("Op");
         String BOT_TOKEN = (String)obj.get("DiscordKey");
 
         sttDecoder = new STTModule((String)obj.get("PicoVoiceKey"), (String)obj.get("PorcupineKeyPath"), 10000, (String)obj.get("PorcupineModelPath"));

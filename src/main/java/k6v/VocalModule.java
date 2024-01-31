@@ -50,7 +50,7 @@ public class VocalModule extends ListenerAdapter
 
             Guild guild = event.getGuild();
             audioManager = guild.getAudioManager();
-            SendAudioModule myAudioModule = new SendAudioModule(App.sttDecoder);
+            ReceiverModule myAudioModule = new ReceiverModule(App.sttDecoder);
             audioManager.setReceivingHandler(myAudioModule);
             audioManager.openAudioConnection(myChannel);
         }
@@ -101,7 +101,7 @@ public class VocalModule extends ListenerAdapter
 
             Guild guild = event.getGuild();
             AudioManager audioManager = guild.getAudioManager();
-                SendAudioModule myAudioModule = new SendAudioModule(App.sttDecoder);
+            ReceiverModule myAudioModule = new ReceiverModule(App.sttDecoder);
                 audioManager.setReceivingHandler(myAudioModule);
                 audioManager.openAudioConnection(myChannel);
         }
