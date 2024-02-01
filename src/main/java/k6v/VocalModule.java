@@ -13,15 +13,38 @@ public class VocalModule extends ListenerAdapter
 {
 
     static @Nullable AudioManager audioManager;
+    static @Nullable SendModule mysendModule;
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event)
     {
-        if (!BasicCommands.isUserOp(event.getAuthor())) return;
         if (event.getAuthor().isBot()) return;
         // We don't want to respond to other bot accounts, including ourself
         Message message = event.getMessage();
         String content = message.getContentRaw(); 
+
+        
+        if (content.startsWith("!say "))
+        {
+            if (audioManager == null)
+            {
+                event.getChannel().sendMessage("The bot is not connected. try again later!").queue();
+                return;
+            }
+            mysendModule.respond(content.substring(5));
+        }
+
+        if (content.equals("!bonjour")) {
+            if (audioManager == null)
+            {
+                event.getChannel().sendMessage("The bot is not connected. try again later!").queue();
+                return;
+            }
+            mysendModule.respond("bonjour " + event.getAuthor().getName() + ".");
+        }
+
+
+        if (!BasicCommands.isUserOp(event.getAuthor())) return;
         // getContentRaw() is an atomic getter
         // getContentDisplay() is a lazy getter which modifies the content for e.g. console view (strip discord formatting)
         if (content.equals("!joinvoice"))
@@ -51,7 +74,9 @@ public class VocalModule extends ListenerAdapter
             Guild guild = event.getGuild();
             audioManager = guild.getAudioManager();
             ReceiverModule myAudioModule = new ReceiverModule(App.sttDecoder);
+            mysendModule = new SendModule();
             audioManager.setReceivingHandler(myAudioModule);
+            audioManager.setSendingHandler(mysendModule);
             audioManager.openAudioConnection(myChannel);
         }
         if (content.equals("!leavevoice"))
@@ -69,6 +94,15 @@ public class VocalModule extends ListenerAdapter
         {
             App.sttDecoder.run = false;
             event.getJDA().shutdown();
+        }
+        if (content.equals("!play"))
+        {
+            if (audioManager == null)
+            {
+                event.getChannel().sendMessage("The bot is not connected. try again later!").queue();
+                return;
+            }
+            mysendModule.load("H:\\k6v\\main\\testvoice.wav");
         }
     }
 

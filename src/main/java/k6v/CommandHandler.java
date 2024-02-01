@@ -57,7 +57,7 @@ public class CommandHandler extends ListenerAdapter
         {
             BasicCommands.ping(event);
         }
-        if (name.equals("updateSlash"))
+        if (name.equals("updateslash"))
         {
             if (! BasicCommands.isUserOp(user)) 
             {
@@ -66,7 +66,7 @@ public class CommandHandler extends ListenerAdapter
             }
             BasicCommands.updateSlash(event);
         }
-        if (name.equals("whoAmI"))
+        if (name.equals("whoami"))
         {
             BasicCommands.whoAmI(event, user, event.getGuild());
         }

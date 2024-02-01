@@ -24,3 +24,7 @@ hs_err_pid*
 replay_pid*
 
 option.json
+audio.pho
+audio.wav
+textToRead.txt
+donnees/pho_wav/phrase.pho

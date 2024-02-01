@@ -1,10 +1,10 @@
 package k6v;
 
-import java.io.*;
+import java.io.FileReader;
 import java.util.ArrayList;
 
-import org.json.simple.*;
-import org.json.simple.parser.*;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;

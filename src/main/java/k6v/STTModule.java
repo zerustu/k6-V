@@ -74,7 +74,6 @@ public class STTModule {
                 ready = false;
                 System.out.println("K6-V was detected !");
                 for (Entry<String, UserBuffer> entry : usersProba.entrySet()) {
-                    System.out.println("testing " + entry.getKey());
                     List<short[]> datas = entry.getValue().getData(); 
                     for (short[] s : datas) {
                         keywordsIndex = localporc.process(s);
