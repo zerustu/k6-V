@@ -1,7 +1,5 @@
 package k6v;
 
-import org.jetbrains.annotations.Nullable;
-
 import net.dv8tion.jda.api.audio.AudioReceiveHandler;
 import net.dv8tion.jda.api.audio.CombinedAudio;
 import net.dv8tion.jda.api.audio.UserAudio;
@@ -13,7 +11,7 @@ public class ReceiverModule implements AudioReceiveHandler  {
 
     STTModule decoderModule;
     Boolean isFocusing;
-    @Nullable User userFocus;
+    String userFocus;
     static final AudioFormat Format = OUTPUT_FORMAT;
 
     public ReceiverModule(STTModule decoder)
@@ -30,9 +28,14 @@ public class ReceiverModule implements AudioReceiveHandler  {
         {
             return;
         }
-        //decoderModule.addData(userAudio.getAudioData(1));
-        decoderModule.addUserData(userAudio);
-        //decoderModule.addData(userAudio.getAudioData(1));
+        if (userFocus == null) decoderModule.addUserData(userAudio);
+        else
+        {
+            if (user.getId().equals(userFocus))
+            {
+                decoderModule.recordUser(userAudio);
+            }
+        }
     }
 
     @Override
@@ -42,7 +45,7 @@ public class ReceiverModule implements AudioReceiveHandler  {
 
     @Override
     public boolean canReceiveCombined() {
-        return true;
+        return (userFocus == null);
     }
 
     @Override

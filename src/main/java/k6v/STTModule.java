@@ -1,10 +1,19 @@
 package k6v;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -28,6 +37,10 @@ public class STTModule {
     ReceiverModule feedbackinfo;
     boolean ready;
 
+    private ByteArrayOutputStream byteArrayOutputStream;
+    boolean is_focused;
+    int userTimeOut;
+
     public void addData(byte[] dataIn)
     {
         if (fifoQueue.remainingCapacity() > 0)
@@ -44,7 +57,7 @@ public class STTModule {
     {
         if (!ready) return;
         if (userAudio.getUser().isBot() || userAudio.getUser().isSystem()) return;
-        String key = userAudio.getUser().toString();
+        String key = userAudio.getUser().getId();
         if (usersProba.containsKey(key)) {
             usersProba.get(key).addData(userAudio.getAudioData(1));
         }
@@ -55,6 +68,16 @@ public class STTModule {
             Thread loopi = new Thread(() -> {newBuffer.register();});
             loopi.start();
             usersProba.put(key, newBuffer);
+        }
+    }
+
+    public void recordUser(UserAudio userAudio)
+    {
+        byte[] dataIn = userAudio.getAudioData(1);
+        if (is_focused)
+        {
+            userTimeOut = 20;
+            byteArrayOutputStream.write(dataIn, 0, dataIn.length);
         }
     }
 
@@ -72,6 +95,7 @@ public class STTModule {
             keywordsIndex = localporc.process(dataIn);
             if (keywordsIndex == 0) {
                 ready = false;
+                String result = null;
                 System.out.println("K6-V was detected !");
                 for (Entry<String, UserBuffer> entry : usersProba.entrySet()) {
                     List<short[]> datas = entry.getValue().getData(); 
@@ -79,12 +103,19 @@ public class STTModule {
                         keywordsIndex = localporc.process(s);
                         if (keywordsIndex == 0)
                         {
-                            System.out.println("i think it is " + entry.getKey());
+                            result = entry.getKey();
                         }
                     }
                     entry.getValue().run = false;
                 }
                 usersProba.clear();
+                if (result != null)
+                {
+                    byteArrayOutputStream = new ByteArrayOutputStream();
+                    is_focused = true;
+                    feedbackinfo.userFocus = result;
+                    userTimeOut = 0;
+                }
                 ready = true;
             }
         } catch (PorcupineException e) {
@@ -139,72 +170,106 @@ public class STTModule {
 
         System.out.println("Process data is alive");
         while (run) {
-            if (currentByte == null)
+            if (is_focused)
             {
-                if (!fifoQueue.isEmpty()) {
-                    currentByte = fifoQueue.poll();
-                    TimeOutTimer = 0;
-                    //System.out.println("processing new data");
-                }
-                else if (TimeOutTimer > 50)
+                if (userTimeOut > 50)
                 {
-                    System.out.println("TimeOuted, let's flush the data");
-                    if (j != 0)
-                    {
-                        framebuffer[bufferIndex] = samplebuffer;
-                        samplebuffer = 0;
-                        j = 0;
-                        bufferIndex++;
+                    feedbackinfo.userFocus = null;
+                    is_focused = false;
+                    try {
+                        AudioInputStream audioInputStream = new AudioInputStream(
+                            new ByteArrayInputStream(byteArrayOutputStream.toByteArray()),
+                            feedbackinfo.OUTPUT_FORMAT,
+                            byteArrayOutputStream.size() / feedbackinfo.OUTPUT_FORMAT.getFrameSize());
+
+                        AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, new File("./userVoice.wav"));
+
+                        // Clean up resources
+                        byteArrayOutputStream.reset();
+                        byteArrayOutputStream.close();
+                        audioInputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    if (bufferIndex != 0)
-                    {
-                        while (bufferIndex < framelength) {
-                            framebuffer[bufferIndex] = (short) 0;
-                            bufferIndex++;
-                        }
-                    }
-                    TimeOutTimer = -1;
                 }
-                else if (TimeOutTimer >= 0)
+                else
                 {
-                    TimeOutTimer++;
+                    userTimeOut += 1;
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException e) {
                     }
                 }
             }
-            if (currentByte != null)
+            else
             {
-                short sample = formatConvert(currentByte[4*j], currentByte[4*j+1], currentByte[4*j+2], currentByte[4*j+3]);
-                j++;
-                samplebuffer += sample;
+                if (currentByte == null)
+                {
+                    if (!fifoQueue.isEmpty()) {
+                        currentByte = fifoQueue.poll();
+                        TimeOutTimer = 0;
+                        //System.out.println("processing new data");
+                    }
+                    else if (TimeOutTimer > 50)
+                    {
+                        System.out.println("TimeOuted, let's flush the data");
+                        if (j != 0)
+                        {
+                            framebuffer[bufferIndex] = samplebuffer;
+                            samplebuffer = 0;
+                            j = 0;
+                            bufferIndex++;
+                        }
+                        if (bufferIndex != 0)
+                        {
+                            while (bufferIndex < framelength) {
+                                framebuffer[bufferIndex] = (short) 0;
+                                bufferIndex++;
+                            }
+                        }
+                        TimeOutTimer = -1;
+                    }
+                    else if (TimeOutTimer >= 0)
+                    {
+                        TimeOutTimer++;
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                        }
+                    }
+                }
+                if (currentByte != null)
+                {
+                    short sample = formatConvert(currentByte[4*j], currentByte[4*j+1], currentByte[4*j+2], currentByte[4*j+3]);
+                    j++;
+                    samplebuffer += sample;
 
-                if (j%3 == 0)
-                {
-                    framebuffer[bufferIndex] = samplebuffer;
-                    bufferIndex++;
-                    samplebuffer = 0;
+                    if (j%3 == 0)
+                    {
+                        framebuffer[bufferIndex] = samplebuffer;
+                        bufferIndex++;
+                        samplebuffer = 0;
+                    }
+                    if (4*j >= currentByte.length)
+                    {
+                        currentByte = null;
+                        j = 0;
+                    }
                 }
-                if (4*j >= currentByte.length)
-                {
-                    currentByte = null;
-                    j = 0;
+                if (bufferIndex == framelength) {
+                    //System.out.println("let's send some data");
+                    feedSTT(framebuffer);
+                    if (TimeOutTimer == -1) {
+                        flushSTT(localcheetah);
+                    }
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    bufferIndex = 0;
                 }
-            }
-            if (bufferIndex == framelength) {
-                //System.out.println("let's send some data");
-                feedSTT(framebuffer);
-                if (TimeOutTimer == -1) {
-                    flushSTT(localcheetah);
-                }
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-                bufferIndex = 0;
             }
         }
         localporc.delete();
@@ -222,6 +287,7 @@ public class STTModule {
     {
         run = true;
         ready = true;
+        is_focused = false;
 
         fifoQueue = new ArrayBlockingQueue<byte[]>(capacity);
         transcript = "";
