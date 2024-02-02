@@ -101,6 +101,7 @@ public class SendModule implements AudioSendHandler {
 
     public void respond(String message)
     {
+        if (is_reading) return;
         is_reading = true;
         try {
             //SynthetiseurMbrola synth = new SynthetiseurMbrola(path, path, message, path, buffersize);

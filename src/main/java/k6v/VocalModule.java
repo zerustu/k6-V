@@ -31,7 +31,8 @@ public class VocalModule extends ListenerAdapter
                 event.getChannel().sendMessage("The bot is not connected. try again later!").queue();
                 return;
             }
-            mysendModule.respond(content.substring(5));
+            Thread saying = new Thread(() -> mysendModule.respond(content.substring(5)));
+            saying.start();
         }
 
         if (content.equals("!bonjour")) {
