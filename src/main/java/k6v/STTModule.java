@@ -1,40 +1,40 @@
 package k6v;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.sound.sampled.*;
 
 import org.jetbrains.annotations.Nullable;
 
-import ai.picovoice.cheetah.Cheetah;
-import ai.picovoice.cheetah.CheetahException;
+import ai.picovoice.cheetah.*;
 import ai.picovoice.porcupine.*;
+import ai.picovoice.rhino.*;
 import net.dv8tion.jda.api.audio.UserAudio;
+import net.dv8tion.jda.api.entities.Member;
 
 public class STTModule {
 
     static final Float limite = (float) (0);
 
+    ReceiverModule receiver;
+    SendModule sender;
+
     BlockingQueue<byte[]> fifoQueue;
     HashMap<String, UserBuffer> usersProba;
 
+    String target;
     Cheetah localcheetah;
     Porcupine localporc;
+    Rhino localrhino;
+
     String transcript;
     String LastTranscript;
+
     Boolean run;
-    ReceiverModule feedbackinfo;
     boolean ready;
 
     private ByteArrayOutputStream byteArrayOutputStream;
@@ -71,12 +71,11 @@ public class STTModule {
         }
     }
 
-    public void recordUser(UserAudio userAudio)
+    public void recordUser(byte[] dataIn)
     {
-        byte[] dataIn = userAudio.getAudioData(1);
         if (is_focused)
         {
-            userTimeOut = 20;
+            userTimeOut = 200;
             byteArrayOutputStream.write(dataIn, 0, dataIn.length);
         }
     }
@@ -88,7 +87,14 @@ public class STTModule {
         return (short) ((leftSample + rightSample)/2);
     }
 
-    protected void feedSTT(short[] dataIn)
+    protected void feedSTT(short[] dataIn) 
+    {
+        if (target.equals("porcupine")) feedSTTporcupine(dataIn);
+        // if (target.equals("wav")) recordUser(dataIn);
+        if (target.equals("rhino")) feedSTTrhino(dataIn);
+    }
+
+    protected void feedSTTporcupine(short[] dataIn)
     {
         int keywordsIndex;
         try {
@@ -111,10 +117,11 @@ public class STTModule {
                 usersProba.clear();
                 if (result != null)
                 {
-                    byteArrayOutputStream = new ByteArrayOutputStream();
-                    is_focused = true;
-                    feedbackinfo.userFocus = result;
-                    userTimeOut = 0;
+                    //byteArrayOutputStream = new ByteArrayOutputStream();
+                    target = "rhino";
+                    receiver.userFocus = result;
+                    sender.load("H:\\k6v\\main\\ok.wav");
+                    System.out.println("start listening");
                 }
                 ready = true;
             }
@@ -122,7 +129,10 @@ public class STTModule {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        /*
+    }
+
+    protected void feedSTTcheta(short[] dataIn)
+    {
         CheetahTranscript transcriptObj;
         try {
             transcriptObj = localcheetah.process(dataIn);
@@ -139,7 +149,35 @@ public class STTModule {
 
         } catch (CheetahException e) {
             e.printStackTrace();
-        } */
+        }
+    }
+
+    protected void feedSTTrhino(short[] dataIn)
+    {    
+        try {
+            boolean isFinalized = localrhino.process(dataIn);
+            if(isFinalized){
+                RhinoInference inference = localrhino.getInference();
+                if(inference.getIsUnderstood()){
+                    String intent = inference.getIntent();
+                    Map<String, String> slots = inference.getSlots();
+                    System.out.println("rhino has detexted intent :" + intent);
+                    slots.forEach((k,v) -> System.out.println("slot : " + k + ", have value : " + v));
+
+                    if (intent.equals("bonjour"))
+                    {
+                        String name = App.bot.getUserById(receiver.userFocus).getName();
+                        sender.respond("bonjour " + name + ".");
+                    }
+                    else sender.respond("rhino a détécté l'intention " + intent + ".");
+                    target = "porcupine";
+                    receiver.userFocus = null;
+                }
+            }
+        } catch (RhinoException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     protected void flushSTT(Cheetah localcheetah)
@@ -166,23 +204,25 @@ public class STTModule {
         short samplebuffer = 0;
 
         int j = 0;
-        int TimeOutTimer = 0;
+        int TimeOutTimer = -600;
 
         System.out.println("Process data is alive");
         while (run) {
-            if (is_focused)
+            if (target.equals("wav"))
             {
-                if (userTimeOut > 50)
+                if (userTimeOut > 500)
                 {
-                    feedbackinfo.userFocus = null;
-                    is_focused = false;
+                    receiver.userFocus = null;
+                    target = "porcupine";
                     try {
                         AudioInputStream audioInputStream = new AudioInputStream(
                             new ByteArrayInputStream(byteArrayOutputStream.toByteArray()),
-                            feedbackinfo.OUTPUT_FORMAT,
-                            byteArrayOutputStream.size() / feedbackinfo.OUTPUT_FORMAT.getFrameSize());
+                            ReceiverModule.OUTPUT_FORMAT,
+                            byteArrayOutputStream.size() / ReceiverModule.OUTPUT_FORMAT.getFrameSize());
 
                         AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, new File("./userVoice.wav"));
+
+                        System.out.println("timed out, stop recording");;
 
                         // Clean up resources
                         byteArrayOutputStream.reset();
@@ -210,7 +250,7 @@ public class STTModule {
                         TimeOutTimer = 0;
                         //System.out.println("processing new data");
                     }
-                    else if (TimeOutTimer > 50)
+                    else if (TimeOutTimer > 100)
                     {
                         System.out.println("TimeOuted, let's flush the data");
                         if (j != 0)
@@ -235,6 +275,22 @@ public class STTModule {
                         try {
                             Thread.sleep(10);
                         } catch (InterruptedException e) {
+                        }
+                    }
+                    else if (TimeOutTimer == -500)
+                    {
+                        System.out.println("timeout 2 : going back to porcupine");
+                        receiver.userFocus = null;
+                        target = "porcupine";
+                        sender.load("H:\\k6v\\main\\ok.wav");
+                        TimeOutTimer--;
+                    }
+                    else if (TimeOutTimer > -500)
+                    {
+                        TimeOutTimer--;
+                        while (bufferIndex < framelength) {
+                            framebuffer[bufferIndex] = (short) 0;
+                            bufferIndex++;
                         }
                     }
                 }
@@ -273,6 +329,7 @@ public class STTModule {
             }
         }
         localporc.delete();
+        localrhino.delete();
         System.out.println("ProcessData is now dead");
     }
 
@@ -282,18 +339,26 @@ public class STTModule {
      * @param capacity 
      * @throws CheetahException
      * @throws PorcupineException 
+     * @throws RhinoException 
      */
-    public STTModule(String accessKey, String porcupinePath, int capacity, String porcupineModelPath) throws CheetahException, PorcupineException
+    public STTModule(String accessKey,
+                     String porcupinePath, 
+                     int capacity, 
+                     String porcupineModelPath,
+                     String rhinoKeyPath,
+                     String rhinoModelPath) throws CheetahException, PorcupineException, RhinoException
     {
         run = true;
         ready = true;
         is_focused = false;
 
         fifoQueue = new ArrayBlockingQueue<byte[]>(capacity);
+        target = "porcupine";
         transcript = "";
         LastTranscript = "";
         usersProba = new HashMap<>();
         //localcheetah = new Cheetah.Builder().setAccessKey(accessKey).setEnableAutomaticPunctuation(true).build();
         localporc = new Porcupine.Builder().setAccessKey(accessKey).setKeywordPath(porcupinePath).setModelPath(porcupineModelPath).build();
+        localrhino = new Rhino.Builder().setAccessKey(accessKey).setContextPath(rhinoKeyPath).setModelPath(rhinoModelPath).build();
     }
 }

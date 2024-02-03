@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.audio.AudioReceiveHandler;
 import net.dv8tion.jda.api.audio.CombinedAudio;
 import net.dv8tion.jda.api.audio.UserAudio;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 
 import javax.sound.sampled.*;
 
@@ -12,13 +13,16 @@ public class ReceiverModule implements AudioReceiveHandler  {
     STTModule decoderModule;
     Boolean isFocusing;
     String userFocus;
+    AudioChannelUnion myChannel;
     static final AudioFormat Format = OUTPUT_FORMAT;
 
-    public ReceiverModule(STTModule decoder)
+    public ReceiverModule(STTModule decoder, AudioChannelUnion channel)
     {
         isFocusing = false;
         userFocus = null;
         decoderModule = decoder;
+        decoder.receiver = this;
+        myChannel = channel;
     }
 
     @Override
@@ -33,7 +37,7 @@ public class ReceiverModule implements AudioReceiveHandler  {
         {
             if (user.getId().equals(userFocus))
             {
-                decoderModule.recordUser(userAudio);
+                decoderModule.addData(userAudio.getAudioData(1));
             }
         }
     }

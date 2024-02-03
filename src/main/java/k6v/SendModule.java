@@ -16,11 +16,12 @@ public class SendModule implements AudioSendHandler {
     boolean ready;
     boolean is_reading;
 
-    public SendModule() {
+    public SendModule(STTModule transcriver) {
         buffersize = 960;//(int)(20*INPUT_FORMAT.getSampleRate()/1000);
         bb = new byte[buffersize*4];
         ready = false;
         is_reading = false;
+        transcriver.sender = this;
         //System.out.println("is there a difference between " + INPUT_FORMAT.getFrameSize() + " and " + (int)(20*INPUT_FORMAT.getSampleRate()/1000));
     }
 

@@ -21,6 +21,8 @@ public class App
 
     static ArrayList<String> ops;
 
+    static JDA bot;
+
     public static void main( String[] args ) throws Exception
     {
         //JSON parser object to parse read file
@@ -33,11 +35,18 @@ public class App
         ops = (ArrayList<String>)obj.get("Op");
         String BOT_TOKEN = (String)obj.get("DiscordKey");
 
-        sttDecoder = new STTModule((String)obj.get("PicoVoiceKey"), (String)obj.get("PorcupineKeyPath"), 10000, (String)obj.get("PorcupineModelPath"));
+        sttDecoder = new STTModule( (String)obj.get("PicoVoiceKey"), 
+                                    (String)obj.get("PorcupineKeyPath"), 
+                                    10000, 
+                                    (String)obj.get("PorcupineModelPath"),
+                                    (String)obj.get("RhinoContextPath"),
+                                    (String)obj.get("RhinoModelPath"));
         Thread picovoicThread = new Thread(() -> {sttDecoder.ProcessData();});
         picovoicThread.start();
 
         JDA api = JDABuilder.createDefault(BOT_TOKEN, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS, GatewayIntent.GUILD_VOICE_STATES).build();
+
+        bot = api;
 
         api.addEventListener(new CommandHandler());
         api.addEventListener(new VocalModule());
