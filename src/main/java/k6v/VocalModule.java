@@ -1,5 +1,9 @@
 package k6v;
 
+import java.io.IOException;
+
+import javax.sound.sampled.UnsupportedAudioFileException;
+
 import org.jetbrains.annotations.Nullable;
 
 import net.dv8tion.jda.api.entities.*;
@@ -95,15 +99,6 @@ public class VocalModule extends ListenerAdapter
         {
             App.sttDecoder.run = false;
             event.getJDA().shutdown();
-        }
-        if (content.equals("!play"))
-        {
-            if (audioManager == null)
-            {
-                event.getChannel().sendMessage("The bot is not connected. try again later!").queue();
-                return;
-            }
-            mysendModule.load("H:\\k6v\\main\\testvoice.wav");
         }
     }
 

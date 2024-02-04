@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.*;
 
 import javax.sound.sampled.*;
 
@@ -12,71 +13,55 @@ public class SendModule implements AudioSendHandler {
 
     AudioInputStream inStream;
     int buffersize;
-    byte[] bb;
-    boolean ready;
+    BlockingQueue<byte[]> samples;
     boolean is_reading;
 
+
+    /**
+     * create a 'SendModule' that implements 'AudioSendHandler', it link itself to the 'STTModule' to get feed back information
+     * @param transcriver 'STTModule' to know when to play sounds
+     */
     public SendModule(STTModule transcriver) {
-        buffersize = 960;//(int)(20*INPUT_FORMAT.getSampleRate()/1000);
-        bb = new byte[buffersize*4];
-        ready = false;
+        buffersize = (int)(20*INPUT_FORMAT.getFrameRate()/1000*INPUT_FORMAT.getFrameSize());
         is_reading = false;
         transcriver.sender = this;
-        //System.out.println("is there a difference between " + INPUT_FORMAT.getFrameSize() + " and " + (int)(20*INPUT_FORMAT.getSampleRate()/1000));
+        samples = new ArrayBlockingQueue<>(16);
     }
 
     @Override
     public boolean canProvide() {
-        return ready;
+        return samples.size() > 0;
     }
 
     @Override
     public ByteBuffer provide20MsAudio() {
-        Thread gonnaprocess = new Thread(() -> processData());
-        gonnaprocess.start();
-        return ByteBuffer.wrap(bb);
+        System.out.println("sending some data");
+        return ByteBuffer.wrap(samples.poll());
     }
 
     private void processData() {
-        ready = false;
-        try {
-            Thread.sleep(5);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        byte[] tempbuf = new byte[buffersize*2/3];
         int byteread;
-        try {
-            byteread = inStream.read(tempbuf, 0, buffersize*2/3);
-            if (byteread == -1) 
-            {
-                inStream.close();
-                inStream = null;
-                is_reading = false;
-                return;
+        while(true) {
+            try {
+                byte[] buffer = new byte[buffersize];
+                byteread = inStream.read(buffer, 0, buffersize);
+                if (byteread == -1) 
+                {
+                    inStream.close();
+                    inStream = null;
+                    is_reading = false;
+                    System.out.println("done reading file. is_reading is set to false");
+                    return;
+                }
+                for (int i = byteread; i < buffersize; i++) {
+                    buffer[i] = 0;
+                    System.out.println("I must fill in some data!");
+                }
+                samples.put(buffer);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            for (int i = 0; i < byteread; i+=2) {
-                bb[6*i] = tempbuf[i+1];
-                bb[6*i + 1] = tempbuf[i];
-                bb[6*i + 2] = tempbuf[i+1];
-                bb[6*i + 3] = tempbuf[i];
-                bb[6*i + 4] = tempbuf[i+1];
-                bb[6*i + 5] = tempbuf[i];
-                bb[6*i + 6] = tempbuf[i+1];
-                bb[6*i + 7] = tempbuf[i];
-                bb[6*i + 8] = tempbuf[i+1];
-                bb[6*i + 9] = tempbuf[i];
-                bb[6*i + 10] = tempbuf[i+1];
-                bb[6*i + 11] = tempbuf[i];
-            }
-            for (int i = byteread*6; i < buffersize*4; i++) {
-                bb[i] = 0;
-            }
-            ready = (byteread != 0);
-        } catch (IOException e) {
-            e.printStackTrace();
-        };
+        }
     }
 
     @Override
@@ -84,25 +69,31 @@ public class SendModule implements AudioSendHandler {
         return false;
     }
 
-    public void load(String path)
+    /**
+     * play a audio file give by the path to the file.
+     * only one file can be read at a time
+     * @param path path to the audio file to play
+     * @throws IllegalStateException an audio file is already playing and is not finished
+     * @throws IOException if the File does not point to valid audio file data recognized by the system
+     * @throws UnsupportedAudioFileException if an I/O exception occurs
+     */
+    public void load(String path) throws IllegalStateException, UnsupportedAudioFileException, IOException
     {
-        try {
-            inStream = AudioSystem.getAudioInputStream(new File(path));
-        } catch (UnsupportedAudioFileException | IOException e) {
-            e.printStackTrace();
-        }
+        if (is_reading) throw new IllegalStateException("The previous file is not finished being read");
         is_reading = true;
-        /*System.out.println("the file have been loaded");
-        System.out.println(inStream.getFormat());
-        System.out.println(INPUT_FORMAT);
-        System.out.println("input framerate:" + inStream.getFormat().getFrameRate() + "\ninput sample rate : " + inStream.getFormat().getSampleRate() + "\n out frame rate : " + INPUT_FORMAT.getFrameRate() + "\n input sample rate : " + INPUT_FORMAT.getSampleRate());
-        */
-        processData();
+        loadNoCheck(path);
     }
 
-    public void respond(String message)
+    protected void loadNoCheck(String path) throws UnsupportedAudioFileException, IOException
     {
-        if (is_reading) return;
+        AudioInputStream FileStream = AudioSystem.getAudioInputStream(new File(path));
+        inStream = AudioSystem.getAudioInputStream(INPUT_FORMAT, FileStream);
+        new Thread(() -> processData()).start();
+    }
+
+    public void respond(String message) throws IllegalStateException
+    {
+        if (is_reading) throw new IllegalStateException("The previous file is not finished being read");
         is_reading = true;
         try {
             //SynthetiseurMbrola synth = new SynthetiseurMbrola(path, path, message, path, buffersize);
@@ -123,7 +114,7 @@ public class SendModule implements AudioSendHandler {
             Process sivox = processBuilder.start();
             sivox.waitFor();
 
-            load("H:\\k6v\\main\\audio.wav");
+            loadNoCheck("H:\\k6v\\main\\audio.wav");
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

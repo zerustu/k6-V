@@ -120,7 +120,12 @@ public class STTModule {
                     //byteArrayOutputStream = new ByteArrayOutputStream();
                     target = "rhino";
                     receiver.userFocus = result;
-                    sender.load("H:\\k6v\\main\\ok.wav");
+                    try {
+                        sender.load("H:\\k6v\\main\\ok.wav");
+                    } catch (IllegalStateException | UnsupportedAudioFileException | IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                     System.out.println("start listening");
                 }
                 ready = true;
@@ -282,7 +287,12 @@ public class STTModule {
                         System.out.println("timeout 2 : going back to porcupine");
                         receiver.userFocus = null;
                         target = "porcupine";
-                        sender.load("H:\\k6v\\main\\ok.wav");
+                        try {
+                            sender.load("H:\\k6v\\main\\ok.wav");
+                        } catch (IllegalStateException | UnsupportedAudioFileException | IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
                         TimeOutTimer--;
                     }
                     else if (TimeOutTimer > -500)
