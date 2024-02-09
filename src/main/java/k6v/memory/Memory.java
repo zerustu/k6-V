@@ -23,12 +23,15 @@ public class Memory {
         return options;
     }
 
+    protected OTTModule ottAuth;
+
     public Memory(JDA jda, File jsonOption) throws StreamReadException, DatabindException, IOException
     {
         ObjectMapper objmapper = new ObjectMapper();
         client = jda;
         id = client.getSelfUser().getIdLong();
         options = objmapper.readValue(jsonOption, Option.class);
+        ottAuth = new OTTModule();
     }
 
     public long getId()
@@ -38,12 +41,15 @@ public class Memory {
 
     @Override
     public String toString() {
-        return "Memory object (id " + id + ")\n" + options.toString();
+        return "Memory object (id " + id + ")\n" + 
+        options.toString() + "\n" +
+        ottAuth.toString() + "\n";
     }
 
     public String toFullString()
     {
-        return "Memory object (id " + id + ")\n" + options.getFullString();
+        return "Memory object (id " + id + ")\n" + 
+        options.getFullString() + "\n";
     }
 
     public boolean reset()
@@ -57,5 +63,10 @@ public class Memory {
             if (op == id) return true;
         }
         return false;
+    }
+
+    public boolean checkOTP(long otp)
+    {
+        return ottAuth.checkOTP(otp);
     }
 }

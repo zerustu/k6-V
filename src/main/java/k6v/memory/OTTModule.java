@@ -53,8 +53,42 @@ public class OTTModule {
         otp = -1; // Reset OTP
     }
 
+    public void revokeOTP()
+    {
+        revokeOTP(otp);
+    }
+
     private long generateRandomOTP() {
         // Generate your random OTP here
         return (long) (Math.random() * Long.MAX_VALUE);
+    }
+
+    @Override
+    public String toString()
+    {
+        if (otp == -1) {
+            return "OTT : no OTP token is valid";
+        }
+        ScheduledFuture<?> task = scheduledTasks.get(otp);
+        if (task == null)
+        {
+            otp = -1;
+            return "OTT : Warning! : an OTP token existe but with no revoker ! it got revoked";
+        }
+        return "OTT : an OTP token exist, it will expire in " + task.getDelay(TimeUnit.SECONDS) + "s";
+    }
+
+    public String getFullString()
+    {
+        if (otp == -1) {
+            return "OTT : no OTP token is valid";
+        }
+        ScheduledFuture<?> task = scheduledTasks.get(otp);
+        if (task == null)
+        {
+            otp = -1;
+            return "OTT : Warning! : an OTP token existe but with no revoker ! it got revoked";
+        }
+        return "OTT : " + otp + ", it will expire in " + task.getDelay(TimeUnit.SECONDS) + "s";
     }
 }
