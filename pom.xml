@@ -27,17 +27,21 @@
   <dependencies>
 
     <dependency>
-      <groupId>ai.picovoice</groupId>
-      <artifactId>rhino-java</artifactId>
-      <version>3.0.2</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.16.1</version>
     </dependency>
 
     <dependency>
-      <groupId>SI_VOX</groupId>
-      <artifactId>t2s</artifactId>
-      <version>1.0</version>
-      <scope>system</scope>
-      <systemPath>H:/k6v/main/lib/SI_VOX.jar</systemPath>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.16.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ai.picovoice</groupId>
+      <artifactId>rhino-java</artifactId>
+      <version>3.0.2</version>
     </dependency>
 
     <dependency>
@@ -57,12 +61,14 @@
       <artifactId>json-simple</artifactId>
       <version>1.1.1</version>
     </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>net.dv8tion</groupId>
       <artifactId>JDA</artifactId>
