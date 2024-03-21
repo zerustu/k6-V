@@ -4,26 +4,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.jetbrains.annotations.Nullable;
 
 public class UserBuffer {
     BlockingQueue<byte[]> dataQueue;
-    short[] framebuffer;
+    ArrayList<byte[]> framebuffer;
     int index;
-    int size;
-    int length;
+    int capacity;
 
-    boolean ready;
-    boolean run;
+    public boolean ready;
+    public boolean run;
 
-    public UserBuffer(int length, int packetNumber, int capacity)
+    public UserBuffer(int capacity)
     {
         dataQueue = new ArrayBlockingQueue<>(capacity);
-        this.length = length;
-        size = length * packetNumber;
-        framebuffer = new short[size];
+        framebuffer = new ArrayList<byte[]>(capacity);
         index = 0;
+        this.capacity = capacity;
 
         ready = true;
         run = true;
@@ -37,24 +36,13 @@ public class UserBuffer {
         dataQueue.offer(inData);
     }
 
-    public List<short[]> getData()
+    public List<byte[]> getData()
     {
         ready = false;
-        ArrayList<short[]> result = new ArrayList<>();
-        short[] sample = null;
-        for (int i = 0; i < size; i++) {
-            int j = i % length;
-            if (j == 0 || sample == null) {
-                sample = new short[length];
-            }
-            sample[j] = framebuffer[index];
-            framebuffer[index] = 0;
-            index++;
-            if (index >= size) index = 0;
-            if (j == length-1)
-            {
-                result.add(sample);
-            }
+        ArrayList<byte[]> result = new ArrayList<>();
+        for (int i = 0; i < capacity; i++) {
+            int j = (i + index) % capacity;
+            result.add(framebuffer.get(j));
         }
         return result;
     }
@@ -62,36 +50,22 @@ public class UserBuffer {
     public void register()
     {
         @Nullable byte[] currentByte = null;
-        short samplebuffer = 0;
-        int j = 0;
         while (run) {
             if (currentByte == null)
             {
                 if (!dataQueue.isEmpty()) {
-                    currentByte = dataQueue.poll();
+                    try {
+                        currentByte = dataQueue.poll(20, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                    }
                     //System.out.println("processing new data");
                 }
             }
             if (currentByte != null)
             {
-                short sample = STTModule.formatConvert(currentByte[4*j], currentByte[4*j+1], currentByte[4*j+2], currentByte[4*j+3]);
-                j++;
-                samplebuffer += sample;
-
-                if (j%3 == 0)
-                {
-                    while (!ready){};
-                    framebuffer[index] = samplebuffer;
-                    samplebuffer = 0;
-                    index++;
-                }
-                if (index >= size) {
+                framebuffer.set(index, currentByte);
+                if (index >= capacity) {
                     index = 0;
-                }
-                if (4*j >= currentByte.length)
-                {
-                    currentByte = null;
-                    j = 0;
                 }
             }
             

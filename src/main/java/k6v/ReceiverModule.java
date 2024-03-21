@@ -10,51 +10,30 @@ import javax.sound.sampled.*;
 
 public class ReceiverModule implements AudioReceiveHandler  {
 
-    STTModule decoderModule;
     Boolean isFocusing;
-    String userFocus;
+    public long userFocus;
     AudioChannelUnion myChannel;
     static final AudioFormat Format = OUTPUT_FORMAT;
 
-    public ReceiverModule(STTModule decoder, AudioChannelUnion channel)
+    public ReceiverModule(AudioChannelUnion channel)
     {
         isFocusing = false;
-        userFocus = null;
-        decoderModule = decoder;
-        decoder.receiver = this;
+        userFocus = 0;
         myChannel = channel;
     }
 
     @Override
-    public void handleUserAudio(UserAudio userAudio) {
-        User user = userAudio.getUser();
-        if (user.isBot() || user.isSystem())
-        {
-            return;
-        }
-        if (userFocus == null) decoderModule.addUserData(userAudio);
-        else
-        {
-            if (user.getId().equals(userFocus))
-            {
-                decoderModule.addData(userAudio.getAudioData(1));
-            }
-        }
-    }
-
-    @Override
     public boolean canReceiveUser() {
-        return true;
+        return false;
     }
 
     @Override
     public boolean canReceiveCombined() {
-        return (userFocus == null);
+        return false;
     }
 
     @Override
     public void handleCombinedAudio(CombinedAudio combinedAudio) {
-        decoderModule.addData(combinedAudio.getAudioData(1));
     }
 
     

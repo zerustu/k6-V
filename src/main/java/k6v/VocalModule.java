@@ -1,9 +1,5 @@
 package k6v;
 
-import java.io.IOException;
-
-import javax.sound.sampled.UnsupportedAudioFileException;
-
 import org.jetbrains.annotations.Nullable;
 
 import net.dv8tion.jda.api.entities.*;
@@ -78,8 +74,8 @@ public class VocalModule extends ListenerAdapter
 
             Guild guild = event.getGuild();
             audioManager = guild.getAudioManager();
-            ReceiverModule myAudioModule = new ReceiverModule(App.sttDecoder, myChannel);
-            mysendModule = new SendModule(App.sttDecoder);
+            ReceiverModule myAudioModule = new ReceiverModule(myChannel);
+            mysendModule = new SendModule();
             audioManager.setReceivingHandler(myAudioModule);
             audioManager.setSendingHandler(mysendModule);
             audioManager.openAudioConnection(myChannel);
@@ -97,7 +93,6 @@ public class VocalModule extends ListenerAdapter
         }
         if (content.equals("!close"))
         {
-            App.sttDecoder.run = false;
             event.getJDA().shutdown();
         }
     }
@@ -131,7 +126,7 @@ public class VocalModule extends ListenerAdapter
 
             Guild guild = event.getGuild();
             AudioManager audioManager = guild.getAudioManager();
-            ReceiverModule myAudioModule = new ReceiverModule(App.sttDecoder, myChannel);
+            ReceiverModule myAudioModule = new ReceiverModule(myChannel);
                 audioManager.setReceivingHandler(myAudioModule);
                 audioManager.openAudioConnection(myChannel);
         }

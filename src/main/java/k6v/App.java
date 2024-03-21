@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import k6v.memory.*;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.requests.GatewayIntent;
@@ -16,13 +17,9 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
  */
 public class App 
 {
-
-    public static STTModule sttDecoder;
-
-    static ArrayList<String> ops;
-
-    static JDA bot;
-
+    static Option opts;
+    
+    static Memory mem;
     public static void main( String[] args ) throws Exception
     {
         //JSON parser object to parse read file
@@ -32,21 +29,12 @@ public class App
 
          //Read JSON file
         JSONObject obj = (JSONObject)jsonParser.parse(reader);
-        ops = (ArrayList<String>)obj.get("Op");
-        String BOT_TOKEN = (String)obj.get("DiscordKey");
 
-        sttDecoder = new STTModule( (String)obj.get("PicoVoiceKey"), 
-                                    (String)obj.get("PorcupineKeyPath"), 
-                                    10000, 
-                                    (String)obj.get("PorcupineModelPath"),
-                                    (String)obj.get("RhinoContextPath"),
-                                    (String)obj.get("RhinoModelPath"));
-        Thread picovoicThread = new Thread(() -> {sttDecoder.ProcessData();});
-        picovoicThread.start();
+        opts = new Option(obj);
 
-        JDA api = JDABuilder.createDefault(BOT_TOKEN, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS, GatewayIntent.GUILD_VOICE_STATES).build();
+        JDA api = JDABuilder.createDefault(opts.getDiscordToken(), GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_MEMBERS, GatewayIntent.GUILD_VOICE_STATES).build();
 
-        bot = api;
+        mem = new Memory(api, opts);
 
         api.addEventListener(new CommandHandler());
         api.addEventListener(new VocalModule());

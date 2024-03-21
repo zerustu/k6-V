@@ -1,12 +1,5 @@
 package k6v.memory;
 
-import java.io.File;
-import java.io.IOException;
-
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import net.dv8tion.jda.api.JDA;
 
 public class Memory {
@@ -25,12 +18,10 @@ public class Memory {
 
     protected OTTModule ottAuth;
 
-    public Memory(JDA jda, File jsonOption) throws StreamReadException, DatabindException, IOException
+    public Memory(JDA jda, Option opts)
     {
-        ObjectMapper objmapper = new ObjectMapper();
         client = jda;
-        id = client.getSelfUser().getIdLong();
-        options = objmapper.readValue(jsonOption, Option.class);
+        this.options = opts; 
         ottAuth = new OTTModule();
     }
 

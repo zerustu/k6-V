@@ -1,53 +1,31 @@
 package k6v.memory;
 
+import java.util.ArrayList;
+
+import org.json.simple.JSONObject;
+
 public class Option {
+    protected JSONObject option;
+
     protected String discordToken;
 
-    protected String picoToken;
-    protected String porcupineModelPath;
-    protected String porcupineKeyPath;
-    protected String rhinoModelPath;
-    protected String rhinoKeyPath;
-
-    protected long[] ops;
+    protected ArrayList<Long> ops;
 
     public String getDiscordToken() {
         return discordToken;
     }
 
-    public String getPicoToken() {
-        return picoToken;
-    }
-
-    public String getPorcupineModelPath() {
-        return porcupineModelPath;
-    }
-
-    public String getPorcupineKeyPath() {
-        return porcupineKeyPath;
-    }
-
-    public String getRhinoModelPath() {
-        return rhinoModelPath;
-    }
-
-    public String getRhinoKeyPath() {
-        return rhinoKeyPath;
-    }
-
-    public long[] getOps() {
+    public ArrayList<Long> getOps() {
         return ops;
     }
 
-    public Option(String discordToken, String picoToken, String porcupineModelPath, String porcupineKeyPath,
-            String rhinoModelPath, String rhinoKeyPath, long[] ops) {
-        this.discordToken = discordToken;
-        this.picoToken = picoToken;
-        this.porcupineModelPath = porcupineModelPath;
-        this.porcupineKeyPath = porcupineKeyPath;
-        this.rhinoModelPath = rhinoModelPath;
-        this.rhinoKeyPath = rhinoKeyPath;
-        this.ops = ops;
+    public String Si_voix_folder;
+
+    public Option(JSONObject options) {
+       this.option = options;
+       this.discordToken = (String)option.get("DiscordKey");
+       this.ops = (ArrayList<Long>)options.get("Op");
+       this.Si_voix_folder = (String)option.get("si_voix_folder");
     }
 
     @Override
@@ -56,15 +34,9 @@ public class Option {
         String result = String.format(
             "Option values (truncated for security): {\n" + 
             "   discord Token : %.4s\n" +
-            "   picovoice Token : %.4s\n" +
-            "   porcupine Model Path : %s\n" +
-            "   porcupine Key Path : %s\n" +
-            "   rhino Model Path : %s\n" +
-            "   rhino Key Path : %s\n" +
             "   List of Op user : %s\n" +
             "}",
-            discordToken, picoToken, porcupineModelPath, porcupineKeyPath, 
-            rhinoModelPath, rhinoKeyPath, ops
+            discordToken, ops
         );
         return result;
     }
@@ -74,15 +46,9 @@ public class Option {
         String result = String.format(
             "Option values : {\n" + 
             "   discord Token : %s\n" +
-            "   picovoice Token : %s\n" +
-            "   porcupine Model Path : %s\n" +
-            "   porcupine Key Path : %s\n" +
-            "   rhino Model Path : %s\n" +
-            "   rhino Key Path : %s\n" +
             "   List of Op user : %s\n" +
             "}",
-            discordToken, picoToken, porcupineModelPath, porcupineKeyPath, 
-            rhinoModelPath, rhinoKeyPath, ops
+            discordToken, ops
         );
         return result;
     }

@@ -16,16 +16,18 @@ public class SendModule implements AudioSendHandler {
     BlockingQueue<byte[]> samples;
     boolean is_reading;
 
+    String folder_path; 
+
 
     /**
      * create a 'SendModule' that implements 'AudioSendHandler', it link itself to the 'STTModule' to get feed back information
      * @param transcriver 'STTModule' to know when to play sounds
      */
-    public SendModule(STTModule transcriver) {
+    public SendModule() {
         buffersize = (int)(20*INPUT_FORMAT.getFrameRate()/1000*INPUT_FORMAT.getFrameSize());
         is_reading = false;
-        transcriver.sender = this;
         samples = new ArrayBlockingQueue<>(16);
+        folder_path = App.opts.Si_voix_folder;
     }
 
     @Override
@@ -97,24 +99,24 @@ public class SendModule implements AudioSendHandler {
         is_reading = true;
         try {
             //SynthetiseurMbrola synth = new SynthetiseurMbrola(path, path, message, path, buffersize);
-            FileWriter text = new FileWriter("H:\\k6v\\main\\textToRead.txt");
+            FileWriter text = new FileWriter(folder_path + "\\textToRead.txt");
             text.write(message + "\n");
             text.close();
 
             String[] command = {
                 "java",
                 "-jar",
-                "H:\\k6v\\SI_VOX-src\\SI_VOX.jar",
+                folder_path + "\\SI_VOX.jar",
                 "-f",
-                "H:\\k6v\\main\\textToRead.txt",
-                "H:\\k6v\\main\\audio"
+                folder_path + "\\textToRead.txt",
+                folder_path + "\\audio"
             };
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             Process sivox = processBuilder.start();
             sivox.waitFor();
 
-            loadNoCheck("H:\\k6v\\main\\audio.wav");
+            loadNoCheck(folder_path + "\\audio.wav");
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

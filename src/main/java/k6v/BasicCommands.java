@@ -21,13 +21,7 @@ public class BasicCommands {
      */
     public static boolean isUserOp(User user)
     {
-        for (String op : App.ops) {
-            if (op.equals(user.getId()))
-            {
-                return true;
-            }
-        }
-        return false;
+        return App.mem.isOp(user.getIdLong());
     }
 
 
@@ -104,7 +98,7 @@ public class BasicCommands {
         result.add(Commands.slash("joinvoice", "join the vocal you are in"));
         result.add(Commands.slash("ping", "get ping information"));
         result.add(Commands.slash("link", "get the link to invite the bot (need to be op)"));
-        result.add(Commands.slash("whoAmI", "get information about your Id and the guild Id"));
+        result.add(Commands.slash("whoami", "get information about your Id and the guild Id"));
         return result;
     }
 }
